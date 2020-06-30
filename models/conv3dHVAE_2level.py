@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.data
-from Model import Model
+from models.Model import Model
 from scipy.special import logsumexp
 from torch.autograd import Variable
 

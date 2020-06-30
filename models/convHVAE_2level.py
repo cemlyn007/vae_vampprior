@@ -6,8 +6,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.data
-from Model import Model
-from scipy.misc import logsumexp
+from models.Model import Model
+from scipy.special import logsumexp
 from torch.autograd import Variable
 
 from utils.distributions import log_Bernoulli, log_Normal_diag, log_Normal_standard, log_Logistic_256

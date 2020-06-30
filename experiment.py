@@ -64,7 +64,7 @@ parser.add_argument('--use_training_data_init', action='store_true', default=Fal
                     help='initialize pseudo-inputs with randomly chosen training data')
 
 # model: model name, prior
-parser.add_argument('--model_name', type=str, default='vae', metavar='MN',
+parser.add_argument('--model_name', type=str, default='convhvae_2level', metavar='MN',
                     help='model name: vae, hvae_2level, convhvae_2level, pixelhvae_2level')
 
 parser.add_argument('--prior', type=str, default='vampprior', metavar='P',

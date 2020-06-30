@@ -12,6 +12,51 @@ from scipy.io import loadmat
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # ======================================================================================================================
+def load_voxel_vortices(args, **kwargs):
+    # set args
+    args.input_size = [1, 32, 32]
+    args.input_type = 'binary'
+    args.dynamic_binarization = False
+
+    # start processing
+    from datasets.vortices.dataset import VoxelDataset
+
+    dataset = VoxelDataset(os.path.join('datasets', 'vortices', 'data'), data_only=True)
+
+    train_percentage = 0.75
+    val_percentage = 0.1
+    test_percentage = 0.15
+
+    training_size = round(train_percentage * len(dataset))
+    val_size = round(val_percentage * len(dataset))
+    testing_size = len(dataset) - val_size - training_size
+
+    training_dataset, val_dataset, testing_dataset = torch.utils.data.random_split(dataset, lengths=[training_size,
+                                                                                                     val_size,
+                                                                                                     testing_size])
+
+    # pytorch data loader
+    train_loader = data_utils.DataLoader(training_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
+    val_loader = data_utils.DataLoader(val_dataset, batch_size=args.test_batch_size, shuffle=False, **kwargs)
+    test_loader = data_utils.DataLoader(testing_dataset, batch_size=args.test_batch_size, shuffle=False, **kwargs)
+
+    # setting pseudo-inputs inits
+    if args.use_training_data_init == 1:
+        # This workaround should work
+        x_train = np.stack(training_dataset[i] for i in np.random.choice([j for j in range(len(training_dataset))],
+                                                                         size=args.number_components))
+        args.pseudoinputs_std = 0.01
+        init = x_train.T
+        args.pseudoinputs_mean = torch.from_numpy(
+            init + args.pseudoinputs_std * np.random.randn(np.prod(args.input_size), args.number_components)).float()
+    else:
+        args.pseudoinputs_mean = 0.05
+        args.pseudoinputs_std = 0.01
+
+    return train_loader, val_loader, test_loader, args
+
+
+# ======================================================================================================================
 def load_static_mnist(args, **kwargs):
     # set args
     args.input_size = [1, 28, 28]
@@ -413,6 +458,8 @@ def load_dataset(args, **kwargs):
         train_loader, val_loader, test_loader, args = load_freyfaces(args, **kwargs)
     elif args.dataset_name == 'cifar10':
         train_loader, val_loader, test_loader, args = load_cifar10(args, **kwargs)
+    elif args.dataset_name == "vortices":
+        train_loader, val_loader, test_loader, args = load_voxel_vortices(args, **kwargs)
     else:
         raise Exception('Wrong name of the dataset!')
 

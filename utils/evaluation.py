@@ -1,15 +1,13 @@
 from __future__ import print_function
 
-import torch
-from torch.autograd import Variable
-
-from utils.visual_evaluation import plot_images
-
-import numpy as np
-
+import os
 import time
 
-import os
+import torch
+
+from utils.visual_evaluation import plot_images, plot_vols
+
+
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # ======================================================================================================================
@@ -42,10 +40,19 @@ def evaluate_vae(args, model, train_loader, data_loader, epoch, dir, mode):
                 if epoch == 1:
                     if not os.path.exists(dir + 'reconstruction/'):
                         os.makedirs(dir + 'reconstruction/')
-                    # VISUALIZATION: plot real images
-                    plot_images(args, data.data.cpu().numpy()[0:9], dir + 'reconstruction/', 'real', size_x=3, size_y=3)
+                    if len(data.data[0].size()) == 3:
+                        # VISUALIZATION: plot real images
+                        plot_images(args, data.data.cpu().numpy()[0:9], dir + 'reconstruction/', 'real', size_x=3,
+                                    size_y=3)
+                    elif len(data.data[0].size()) == 4:
+                        plot_vols(args, data.data.cpu().numpy()[0:9], dir + 'reconstruction/', 'real')
+
                 x_mean = model.reconstruct_x(x)
-                plot_images(args, x_mean.data.cpu().numpy()[0:9], dir + 'reconstruction/', str(epoch), size_x=3, size_y=3)
+                if len(data.data[0].size()) == 3:
+                    plot_images(args, x_mean.data.cpu().numpy()[0:9], dir + 'reconstruction/', str(epoch), size_x=3,
+                                size_y=3)
+                elif len(data.data[0].size()) == 4:
+                    plot_vols(args, x_mean.data.cpu().numpy()[0:9], dir + 'reconstruction/', str(epoch))
 
     if mode == 'test':
         # load all data
@@ -75,23 +82,36 @@ def evaluate_vae(args, model, train_loader, data_loader, epoch, dir, mode):
         # print(model.means(model.idle_input))
 
         # VISUALIZATION: plot real images
-        plot_images(args, test_data.data.cpu().numpy()[0:25], dir, 'real', size_x=5, size_y=5)
+        if len(data.data[0].size()) == 3:
+            plot_images(args, test_data.data.cpu().numpy()[0:25], dir, 'real', size_x=5, size_y=5)
+        elif len(data.data[0].size()) == 4:
+            plot_vols(args, test_data.data.cpu().numpy()[0:25], dir, 'real')
+
 
         # VISUALIZATION: plot reconstructions
         samples = model.reconstruct_x(test_data[0:25])
 
-        plot_images(args, samples.data.cpu().numpy(), dir, 'reconstructions', size_x=5, size_y=5)
+        if len(data.data[0].size()) == 3:
+            plot_images(args, samples.data.cpu().numpy(), dir, 'reconstructions', size_x=5, size_y=5)
+        elif len(data.data[0].size()) == 4:
+            plot_vols(args, samples.data.cpu().numpy(), dir, 'reconstructions')
+
 
         # VISUALIZATION: plot generations
         samples_rand = model.generate_x(25)
 
-        plot_images(args, samples_rand.data.cpu().numpy(), dir, 'generations', size_x=5, size_y=5)
+        if len(data.data[0].size()) == 3:
+            plot_images(args, samples_rand.data.cpu().numpy(), dir, 'generations', size_x=5, size_y=5)
+        elif len(data.data[0].size()) == 4:
+            plot_vols(args, samples_rand.data.cpu().numpy(), dir, 'generations')
+
 
         if args.prior == 'vampprior':
             # VISUALIZE pseudoinputs
             pseudoinputs = model.means(model.idle_input).cpu().data.numpy()
 
-            plot_images(args, pseudoinputs[0:25], dir, 'pseudoinputs', size_x=5, size_y=5)
+            if len(data.data[0].size()) == 3:
+                plot_images(args, pseudoinputs[0:25], dir, 'pseudoinputs', size_x=5, size_y=5)
 
         # CALCULATE lower-bound
         t_ll_s = time.time()
@@ -113,7 +133,7 @@ def evaluate_vae(args, model, train_loader, data_loader, epoch, dir, mode):
 
         # CALCULATE log-likelihood
         t_ll_s = time.time()
-        log_likelihood_train = 0. #model.calculate_likelihood(full_data, dir, mode='train', S=args.S, MB=args.MB)) #commented because it takes too much time
+        log_likelihood_train = 0.  # model.calculate_likelihood(full_data, dir, mode='train', S=args.S, MB=args.MB)) #commented because it takes too much time
         t_ll_e = time.time()
         print('Train log_likelihood value {:.2f} in time: {:.2f}s'.format(log_likelihood_train, t_ll_e - t_ll_s))
 

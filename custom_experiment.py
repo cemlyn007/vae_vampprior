@@ -44,7 +44,7 @@ parser.add_argument('--z1_size', type=int, default=40, metavar='M1',
                     help='latent size')
 parser.add_argument('--z2_size', type=int, default=40, metavar='M2',
                     help='latent size')
-parser.add_argument('--input_size', type=int, default=[1, 28, 28], metavar='D',
+parser.add_argument('--input_size', type=int, default=[1, 32, 32], metavar='D',
                     help='input size')
 
 parser.add_argument('--activation', type=str, default=None, metavar='ACT',
@@ -77,8 +77,8 @@ parser.add_argument('--MB', type=int, default=100, metavar='MBLL',
                     help='size of a mini-batch used for approximating log-likelihood')
 
 # dataset
-parser.add_argument('--dataset_name', type=str, default='cifar10', metavar='DN',
-                    help='name of the dataset: static_mnist, dynamic_mnist, omniglot, caltech101silhouettes, histopathologyGray, freyfaces, cifar10')
+parser.add_argument('--dataset_name', type=str, default='vortices', metavar='DN',
+                    help='name of the dataset: static_mnist, dynamic_mnist, omniglot, caltech101silhouettes, histopathologyGray, freyfaces, cifar10, vortices')
 
 parser.add_argument('--dynamic_binarization', action='store_true', default=False,
                     help='allow dynamic binarization')
