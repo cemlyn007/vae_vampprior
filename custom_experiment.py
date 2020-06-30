@@ -1,16 +1,13 @@
 from __future__ import print_function
+
 import argparse
-
-import torch
-import torch.optim as optim
-
-from utils.optimizer import AdamNormGrad
-
+import datetime
 import os
 
-import datetime
+import torch
 
 from utils.load_data import load_dataset
+from utils.optimizer import AdamNormGrad
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -20,7 +17,7 @@ from utils.load_data import load_dataset
 
 
 # Training settings
-parser = argparse.ArgumentParser(description='VAE+VampPrior')
+parser = argparse.ArgumentParser(description='Custom VAE+VampPrior 3D')
 # arguments for optimization
 parser.add_argument('--batch_size', type=int, default=100, metavar='BStrain',
                     help='input batch size for training (default: 100)')
@@ -64,7 +61,7 @@ parser.add_argument('--use_training_data_init', action='store_true', default=Fal
                     help='initialize pseudo-inputs with randomly chosen training data')
 
 # model: model name, prior
-parser.add_argument('--model_name', type=str, default='vae', metavar='MN',
+parser.add_argument('--model_name', type=str, default='conv3dhvae_2level', metavar='MN',
                     help='model name: vae, hvae_2level, convhvae_2level, pixelhvae_2level')
 
 parser.add_argument('--prior', type=str, default='vampprior', metavar='P',
@@ -86,7 +83,6 @@ parser.add_argument('--dataset_name', type=str, default='cifar10', metavar='DN',
 parser.add_argument('--dynamic_binarization', action='store_true', default=False,
                     help='allow dynamic binarization')
 
-
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -96,17 +92,20 @@ if args.cuda:
 
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 def run(args, kwargs):
     args.model_signature = str(datetime.datetime.now())[0:19]
 
-    model_name = args.dataset_name + '_' + args.model_name + '_' + args.prior + '(K_' + str(args.number_components) + ')' + '_wu(' + str(args.warmup) + ')' + '_z1_' + str(args.z1_size) + '_z2_' + str(args.z2_size)
+    model_name = args.dataset_name + '_' + args.model_name + '_' + args.prior + '(K_' + str(
+        args.number_components) + ')' + '_wu(' + str(args.warmup) + ')' + '_z1_' + str(args.z1_size) + '_z2_' + str(
+        args.z2_size)
 
     # DIRECTORY FOR SAVING
     snapshots_path = 'snapshots/'
-    dir = snapshots_path + args.model_signature + '_' + model_name +  '/'
+    dir = snapshots_path + args.model_signature + '_' + model_name + '/'
 
     if not os.path.exists(dir):
         os.makedirs(dir)
@@ -128,6 +127,9 @@ def run(args, kwargs):
         from models.convHVAE_2level import VAE
     elif args.model_name == 'pixelhvae_2level':
         from models.PixelHVAE_2level import VAE
+    elif args.model_name == 'conv3dhvae_2level':
+        from models.conv3dHVAE_2level import VAE
+
     else:
         raise Exception('Wrong name of the model!')
 
@@ -145,11 +147,15 @@ def run(args, kwargs):
     # ======================================================================================================================
     print('perform experiment')
     from utils.perform_experiment import experiment_vae
-    experiment_vae(args, train_loader, val_loader, test_loader, model, optimizer, dir, model_name = args.model_name)
+    experiment_vae(args, train_loader, val_loader, test_loader, model, optimizer, dir, model_name=args.model_name)
     # ======================================================================================================================
-    print('-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
+    print(
+        '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
     with open('vae_experiment_log.txt', 'a') as f:
-        print('-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n', file=f)
+        print(
+            '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n',
+            file=f)
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #

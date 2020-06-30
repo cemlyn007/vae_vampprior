@@ -22,29 +22,30 @@ def evaluate_vae(args, model, train_loader, data_loader, epoch, dir, mode):
     model.eval()
 
     # evaluate
-    for batch_idx, (data, target) in enumerate(data_loader):
-        if args.cuda:
-            data, target = data.cuda(), target.cuda()
-        data, target = Variable(data, volatile=True), Variable(target)
+    with torch.no_grad():
+        for batch_idx, (data, target) in enumerate(data_loader):
+            if args.cuda:
+                data, target = data.cuda(), target.cuda()
+            # data, target = Variable(data, volatile=True), Variable(target)
 
-        x = data
+            x = data
 
-        # calculate loss function
-        loss, RE, KL = model.calculate_loss(x, average=True)
+            # calculate loss function
+            loss, RE, KL = model.calculate_loss(x, average=True)
 
-        evaluate_loss += loss.data[0]
-        evaluate_re += -RE.data[0]
-        evaluate_kl += KL.data[0]
+            evaluate_loss += loss.item()
+            evaluate_re += -RE.item()
+            evaluate_kl += KL.item()
 
-        # print N digits
-        if batch_idx == 1 and mode == 'validation':
-            if epoch == 1:
-                if not os.path.exists(dir + 'reconstruction/'):
-                    os.makedirs(dir + 'reconstruction/')
-                # VISUALIZATION: plot real images
-                plot_images(args, data.data.cpu().numpy()[0:9], dir + 'reconstruction/', 'real', size_x=3, size_y=3)
-            x_mean = model.reconstruct_x(x)
-            plot_images(args, x_mean.data.cpu().numpy()[0:9], dir + 'reconstruction/', str(epoch), size_x=3, size_y=3)
+            # print N digits
+            if batch_idx == 1 and mode == 'validation':
+                if epoch == 1:
+                    if not os.path.exists(dir + 'reconstruction/'):
+                        os.makedirs(dir + 'reconstruction/')
+                    # VISUALIZATION: plot real images
+                    plot_images(args, data.data.cpu().numpy()[0:9], dir + 'reconstruction/', 'real', size_x=3, size_y=3)
+                x_mean = model.reconstruct_x(x)
+                plot_images(args, x_mean.data.cpu().numpy()[0:9], dir + 'reconstruction/', str(epoch), size_x=3, size_y=3)
 
     if mode == 'test':
         # load all data
