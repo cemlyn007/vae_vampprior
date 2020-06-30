@@ -14,14 +14,14 @@ from scipy.io import loadmat
 # ======================================================================================================================
 def load_voxel_vortices(args, **kwargs):
     # set args
-    args.input_size = [1, 32, 32]
+    args.input_size = [1, 28, 28, 28]
     args.input_type = 'binary'
     args.dynamic_binarization = False
 
     # start processing
     from datasets.vortices.dataset import VoxelDataset
 
-    dataset = VoxelDataset(os.path.join('datasets', 'vortices', 'data'), data_only=True)
+    dataset = VoxelDataset(os.path.join('datasets', 'vortices', 'data'), data_only=False)
 
     train_percentage = 0.75
     val_percentage = 0.1

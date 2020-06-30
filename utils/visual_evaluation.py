@@ -1,11 +1,10 @@
-import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
 import pyvista as pv
 
-import numpy as np
-#=======================================================================================================================
-def plot_histogram( x, dir, mode ):
 
+# =======================================================================================================================
+def plot_histogram(x, dir, mode):
     fig = plt.figure()
 
     # the histogram of the data
@@ -18,9 +17,9 @@ def plot_histogram( x, dir, mode ):
     plt.savefig(dir + 'histogram_' + mode + '.png', bbox_inches='tight')
     plt.close(fig)
 
-#=======================================================================================================================
-def plot_images(args, x_sample, dir, file_name, size_x=3, size_y=3):
 
+# =======================================================================================================================
+def plot_images(args, x_sample, dir, file_name, size_x=3, size_y=3):
     fig = plt.figure(figsize=(size_x, size_y))
     # fig = plt.figure(1)
     gs = gridspec.GridSpec(size_x, size_y)
@@ -46,11 +45,10 @@ def plot_images(args, x_sample, dir, file_name, size_x=3, size_y=3):
 
 
 def plot_vols(args, x_sample, dir, file_name):
-
     scene = pv.PolyData()
 
     for i, sample in enumerate(x_sample):
-        sample = sample.reshape((args.input_size[0], args.input_size[1], args.input_size[2]))
+        sample = sample.reshape((args.input_size[0], args.input_size[1], args.input_size[2], args.input_size[3]))
         volume = sample_to_volume(sample, args.input_size[1])
         volume.points += i
         scene += volume
@@ -58,10 +56,10 @@ def plot_vols(args, x_sample, dir, file_name):
     scene.set_active_scalars("recon")
     scene.save(dir + file_name + '.vtp')
 
+
 def sample_to_volume(sample, resolution=32):
     grid = pv.create_grid(pv.Cube(), dimensions=(resolution, resolution, resolution))
     grid["recon"] = sample.flatten(order='F')
     grid.set_active_scalars("recon")
     # grid.plot(volume=True, show_grid=True)
     return grid
-

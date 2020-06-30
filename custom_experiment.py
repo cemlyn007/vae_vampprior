@@ -19,9 +19,9 @@ from utils.optimizer import AdamNormGrad
 # Training settings
 parser = argparse.ArgumentParser(description='Custom VAE+VampPrior 3D')
 # arguments for optimization
-parser.add_argument('--batch_size', type=int, default=100, metavar='BStrain',
+parser.add_argument('--batch_size', type=int, default=5, metavar='BStrain',
                     help='input batch size for training (default: 100)')
-parser.add_argument('--test_batch_size', type=int, default=100, metavar='BStest',
+parser.add_argument('--test_batch_size', type=int, default=5, metavar='BStest',
                     help='input batch size for testing (default: 100)')
 parser.add_argument('--epochs', type=int, default=2000, metavar='E',
                     help='number of epochs to train (default: 2000)')
@@ -44,7 +44,7 @@ parser.add_argument('--z1_size', type=int, default=40, metavar='M1',
                     help='latent size')
 parser.add_argument('--z2_size', type=int, default=40, metavar='M2',
                     help='latent size')
-parser.add_argument('--input_size', type=int, default=[1, 32, 32], metavar='D',
+parser.add_argument('--input_size', type=int, default=[1, 32, 32, 32], metavar='D',
                     help='input size')
 
 parser.add_argument('--activation', type=str, default=None, metavar='ACT',
@@ -90,7 +90,7 @@ torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
-kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+kwargs = {'num_workers': 4, 'pin_memory': True} if args.cuda else {}
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
