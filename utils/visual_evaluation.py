@@ -53,7 +53,7 @@ def plot_vols(args, x_sample, dir, file_name):
         scene += volume
 
     scene.set_active_scalars("recon")
-    scene.save(dir + file_name + '.vtp')
+    scene.save(dir + file_name + '.vtu')
 
 
 def sample_to_volume(sample, resolution=32, center: tuple = (0., 0., 0.)):
