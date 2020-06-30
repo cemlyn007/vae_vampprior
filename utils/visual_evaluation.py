@@ -49,16 +49,16 @@ def plot_vols(args, x_sample, dir, file_name):
 
     for i, sample in enumerate(x_sample):
         sample = sample.reshape((args.input_size[0], args.input_size[1], args.input_size[2], args.input_size[3]))
-        volume = sample_to_volume(sample, args.input_size[1])
-        volume.points += i
+        volume = sample_to_volume(sample, args.input_size[1], center=(float(2*i), 0., 0.))
         scene += volume
 
     scene.set_active_scalars("recon")
     scene.save(dir + file_name + '.vtp')
 
 
-def sample_to_volume(sample, resolution=32):
-    grid = pv.create_grid(pv.Cube(), dimensions=(resolution, resolution, resolution))
+def sample_to_volume(sample, resolution=32, center: tuple = (0., 0., 0.)):
+    grid = pv.create_grid(pv.Cube(center=center), dimensions=(resolution, resolution, resolution))
+
     grid["recon"] = sample.flatten(order='F')
     grid.set_active_scalars("recon")
     # grid.plot(volume=True, show_grid=True)
