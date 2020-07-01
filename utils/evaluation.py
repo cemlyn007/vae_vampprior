@@ -112,6 +112,8 @@ def evaluate_vae(args, model, train_loader, data_loader, epoch, dir, mode):
 
             if len(data.data[0].size()) == 3:
                 plot_images(args, pseudoinputs[0:25], dir, 'pseudoinputs', size_x=5, size_y=5)
+            elif len(data.data[0].size()) == 4:
+                plot_vols(args, pseudoinputs[0:25], dir, 'pseudoinputs')
 
         # CALCULATE lower-bound
         t_ll_s = time.time()

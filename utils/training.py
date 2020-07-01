@@ -3,7 +3,7 @@ from __future__ import print_function
 import torch
 from torch.autograd import Variable
 
-import numpy as np
+
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # ======================================================================================================================
@@ -19,7 +19,7 @@ def train_vae(epoch, args, train_loader, model, optimizer):
     if args.warmup == 0:
         beta = 1.
     else:
-        beta = 1.* epoch / args.warmup
+        beta = 1. * epoch / args.warmup
         if beta > 1.:
             beta = 1.
     print('beta: {}'.format(beta))

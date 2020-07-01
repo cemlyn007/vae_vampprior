@@ -6,10 +6,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.data
-from models.Model import Model
 from scipy.special import logsumexp
 from torch.autograd import Variable
 
+from models.Model import Model
 from utils.distributions import log_Bernoulli, log_Normal_diag, log_Normal_standard, log_Logistic_256
 from utils.nn import he_init, GatedDense, NonLinear
 from utils.nn3d import Conv3d, GatedConv3d
