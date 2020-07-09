@@ -1,9 +1,11 @@
 from __future__ import print_function
 
 import math
+import os
 import time
 
 import torch
+from torch.utils.tensorboard import SummaryWriter
 
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -15,6 +17,7 @@ def experiment_vae(args, train_loader, val_loader, test_loader, model, optimizer
 
     # SAVING
     torch.save(args, dir + args.model_name + '.config')
+    writer = SummaryWriter(log_dir=os.path.join("runs", model_name))
 
     # best_model = model
     best_loss = 100000.
@@ -75,6 +78,13 @@ def experiment_vae(args, train_loader, val_loader, test_loader, model, optimizer
         # NaN
         if math.isnan(val_loss_epoch):
             break
+
+        writer.add_scalar(tag="Loss/Train", scalar_value=train_loss_epoch, global_step=epoch)
+        writer.add_scalar(tag="Loss/Val", scalar_value=val_loss_epoch, global_step=epoch)
+        writer.add_scalar(tag="Recon/Train", scalar_value=train_re_epoch, global_step=epoch)
+        writer.add_scalar(tag="Recon/Val", scalar_value=val_re_epoch, global_step=epoch)
+        writer.add_scalar(tag="KLD/Train", scalar_value=train_kl_epoch, global_step=epoch)
+        writer.add_scalar(tag="KLD/Val", scalar_value=val_kl_epoch, global_step=epoch)
 
     # FINAL EVALUATION
     best_model = torch.load(dir + args.model_name + '.model')
