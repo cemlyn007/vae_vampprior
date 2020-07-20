@@ -6,14 +6,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.data
-from models.Model import Model
 from scipy.special import logsumexp
 from torch.autograd import Variable
 
-from utils.distributions import log_Bernoulli, log_Normal_diag, log_Normal_standard, log_Logistic_256
-from utils.nn import he_init, GatedDense, NonLinear, \
-    Conv2d, GatedConv2d
-from utils.visual_evaluation import plot_histogram
+from vae_vampprior.models import Model
+from vae_vampprior.utils.distributions import log_Bernoulli, log_Normal_diag, log_Normal_standard, log_Logistic_256
+from vae_vampprior.utils import he_init, GatedDense, NonLinear
+from vae_vampprior.utils import Conv3d, GatedConv3d
+from vae_vampprior.utils import plot_histogram
 
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -23,20 +23,18 @@ class VAE(Model):
     def __init__(self, args):
         super(VAE, self).__init__(args)
 
-        if self.args.dataset_name == 'freyfaces':
-            h_size = 210
-        elif self.args.dataset_name == 'cifar10':
-            h_size = 384
+        if self.args.dataset_name == 'vortices':
+            h_size = 2058
         else:
-            h_size = 294
+            raise NotImplementedError("You'll need to specify h_size here and the name of the dataset!")
 
         # encoder: q(z2 | x)
         self.q_z2_layers = nn.Sequential(
-            GatedConv2d(self.args.input_size[0], 32, 7, 1, 3),
-            GatedConv2d(32, 32, 3, 2, 1),
-            GatedConv2d(32, 64, 5, 1, 2),
-            GatedConv2d(64, 64, 3, 2, 1),
-            GatedConv2d(64, 6, 3, 1, 1)
+            GatedConv3d(self.args.input_size[0], 24, 7, 1, 3),
+            GatedConv3d(24, 24, 3, 2, 1),
+            GatedConv3d(24, 48, 5, 1, 2),
+            GatedConv3d(48, 48, 3, 2, 1),
+            GatedConv3d(48, 6, 3, 1, 1)
         )
         # linear layers
         self.q_z2_mean = NonLinear(h_size, self.args.z2_size, activation=None)
@@ -45,11 +43,11 @@ class VAE(Model):
         # encoder: q(z1|x,z2)
         # PROCESSING x
         self.q_z1_layers_x = nn.Sequential(
-            GatedConv2d(self.args.input_size[0], 32, 3, 1, 1),
-            GatedConv2d(32, 32, 3, 2, 1),
-            GatedConv2d(32, 64, 3, 1, 1),
-            GatedConv2d(64, 64, 3, 2, 1),
-            GatedConv2d(64, 6, 3, 1, 1)
+            GatedConv3d(self.args.input_size[0], 24, 3, 1, 1),
+            GatedConv3d(24, 24, 3, 2, 1),
+            GatedConv3d(24, 48, 3, 1, 1),
+            GatedConv3d(48, 48, 3, 2, 1),
+            GatedConv3d(48, 6, 3, 1, 1)
         )
         # PROCESSING Z2
         self.q_z1_layers_z2 = nn.Sequential(
@@ -87,17 +85,17 @@ class VAE(Model):
         act = nn.ReLU(True)
         # joint
         self.p_x_layers_joint = nn.Sequential(
-            GatedConv2d(self.args.input_size[0], 64, 3, 1, 1),
-            GatedConv2d(64, 64, 3, 1, 1),
-            GatedConv2d(64, 64, 3, 1, 1),
-            GatedConv2d(64, 64, 3, 1, 1),
+            GatedConv3d(self.args.input_size[0], 48, 3, 1, 1),
+            GatedConv3d(48, 48, 3, 1, 1),
+            GatedConv3d(48, 48, 3, 1, 1),
+            GatedConv3d(48, 48, 3, 1, 1),
         )
 
         if self.args.input_type == 'binary':
-            self.p_x_mean = Conv2d(64, 1, 1, 1, 0, activation=nn.Sigmoid())
+            self.p_x_mean = Conv3d(48, 1, 1, 1, 0, activation=nn.Sigmoid())
         elif self.args.input_type == 'gray' or self.args.input_type == 'continuous':
-            self.p_x_mean = Conv2d(64, self.args.input_size[0], 1, 1, 0, activation=nn.Sigmoid())
-            self.p_x_logvar = Conv2d(64, self.args.input_size[0], 1, 1, 0,
+            self.p_x_mean = Conv3d(48, self.args.input_size[0], 1, 1, 0, activation=nn.Sigmoid())
+            self.p_x_logvar = Conv3d(48, self.args.input_size[0], 1, 1, 0,
                                      activation=nn.Hardtanh(min_val=-4.5, max_val=0.))
 
         # weights initialization
@@ -208,8 +206,11 @@ class VAE(Model):
                 z2_sample_rand = z2_sample_rand.cuda()
 
         elif self.args.prior == 'vampprior':
-            means = self.means(self.idle_input)[0:N].view(-1, self.args.input_size[0], self.args.input_size[1],
-                                                          self.args.input_size[2])
+            # if len(self.args.input_size)
+            # means = self.means(self.idle_input)[0:N].view(-1, self.args.input_size[0], self.args.input_size[1],
+            #                                               self.args.input_size[2])
+            means = self.means(self.idle_input)[0:N].view(-1, *self.args.input_size)
+
             z2_sample_gen_mean, z2_sample_gen_logvar = self.q_z2(means)
             z2_sample_rand = self.reparameterize(z2_sample_gen_mean, z2_sample_gen_logvar)
 
@@ -269,7 +270,7 @@ class VAE(Model):
         h = torch.cat((z1, z2), 1)
 
         h = self.p_x_layers_joint_pre(h)
-        h = h.view(-1, self.args.input_size[0], self.args.input_size[1], self.args.input_size[2])
+        h = h.view(-1, *self.args.input_size)
 
         # joint decoder part of the decoder
         h_decoder = self.p_x_layers_joint(h)
@@ -293,8 +294,7 @@ class VAE(Model):
             C = self.args.number_components
 
             # calculate params
-            X = self.means(self.idle_input).view(-1, self.args.input_size[0], self.args.input_size[1],
-                                                 self.args.input_size[2])
+            X = self.means(self.idle_input).view(-1, *self.args.input_size)
 
             # calculate params for given data
             z2_p_mean, z2_p_logvar = self.q_z2(X)  # C x M)
@@ -316,7 +316,7 @@ class VAE(Model):
 
     # THE MODEL: FORWARD PASS
     def forward(self, x):
-        x = x.view(-1, self.args.input_size[0], self.args.input_size[1], self.args.input_size[2])
+        x = x.view(-1, *self.args.input_size)
         # z2 ~ q(z2 | x)
         z2_q_mean, z2_q_logvar = self.q_z2(x)
         z2_q = self.reparameterize(z2_q_mean, z2_q_logvar)

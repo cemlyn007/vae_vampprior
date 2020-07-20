@@ -5,7 +5,7 @@ import time
 
 import torch
 
-from utils.visual_evaluation import plot_images, plot_vols
+from vae_vampprior.utils import plot_images, plot_vols
 
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=

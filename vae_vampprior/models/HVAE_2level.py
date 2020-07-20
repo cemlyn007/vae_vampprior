@@ -1,102 +1,79 @@
 from __future__ import print_function
 
+import numpy as np
+
 import math
 
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.utils.data
 from scipy.special import logsumexp
+
+import torch
+import torch.utils.data
+import torch.nn as nn
+from torch.nn import Linear
 from torch.autograd import Variable
 
-from models.Model import Model
-from utils.distributions import log_Bernoulli, log_Normal_diag, log_Normal_standard, log_Logistic_256
-from utils.nn import he_init, GatedDense, NonLinear
-from utils.nn3d import Conv3d, GatedConv3d
-from utils.visual_evaluation import plot_histogram
+from vae_vampprior.utils.distributions import log_Bernoulli, log_Normal_diag, log_Normal_standard, log_Logistic_256
+from vae_vampprior.utils import plot_histogram
+from vae_vampprior.utils import he_init, GatedDense, NonLinear
 
-
+from vae_vampprior.models import Model
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-# =======================================================================================================================
+#=======================================================================================================================
 class VAE(Model):
     def __init__(self, args):
         super(VAE, self).__init__(args)
 
-        if self.args.dataset_name == 'vortices':
-            h_size = 2058
-        else:
-            raise NotImplementedError("You'll need to specify h_size here and the name of the dataset!")
+        self.args = args
 
         # encoder: q(z2 | x)
         self.q_z2_layers = nn.Sequential(
-            GatedConv3d(self.args.input_size[0], 24, 7, 1, 3),
-            GatedConv3d(24, 24, 3, 2, 1),
-            GatedConv3d(24, 48, 5, 1, 2),
-            GatedConv3d(48, 48, 3, 2, 1),
-            GatedConv3d(48, 6, 3, 1, 1)
+            GatedDense(np.prod(self.args.input_size), 300),
+            GatedDense(300, 300)
         )
-        # linear layers
-        self.q_z2_mean = NonLinear(h_size, self.args.z2_size, activation=None)
-        self.q_z2_logvar = NonLinear(h_size, self.args.z2_size, activation=nn.Hardtanh(min_val=-6., max_val=2.))
 
-        # encoder: q(z1|x,z2)
-        # PROCESSING x
+        self.q_z2_mean = Linear(300, self.args.z2_size)
+        self.q_z2_logvar = NonLinear(300, self.args.z2_size, activation=nn.Hardtanh(min_val=-6.,max_val=2.))
+
+        # encoder: q(z1 | x, z2)
         self.q_z1_layers_x = nn.Sequential(
-            GatedConv3d(self.args.input_size[0], 24, 3, 1, 1),
-            GatedConv3d(24, 24, 3, 2, 1),
-            GatedConv3d(24, 48, 3, 1, 1),
-            GatedConv3d(48, 48, 3, 2, 1),
-            GatedConv3d(48, 6, 3, 1, 1)
+            GatedDense(np.prod(self.args.input_size), 300)
         )
-        # PROCESSING Z2
         self.q_z1_layers_z2 = nn.Sequential(
-            GatedDense(self.args.z2_size, h_size)
+            GatedDense(self.args.z2_size, 300)
         )
-        # PROCESSING JOINT
         self.q_z1_layers_joint = nn.Sequential(
-            GatedDense(2 * h_size, 300)
+            GatedDense(2 * 300, 300)
         )
-        # linear layers
-        self.q_z1_mean = NonLinear(300, self.args.z1_size, activation=None)
-        self.q_z1_logvar = NonLinear(300, self.args.z1_size, activation=nn.Hardtanh(min_val=-6., max_val=2.))
 
-        # decoder p(z1|z2)
+        self.q_z1_mean = Linear(300, self.args.z1_size)
+        self.q_z1_logvar = NonLinear(300, self.args.z1_size, activation=nn.Hardtanh(min_val=-6.,max_val=2.))
+
+        # decoder: p(z1 | z2)
         self.p_z1_layers = nn.Sequential(
             GatedDense(self.args.z2_size, 300),
             GatedDense(300, 300)
         )
-        self.p_z1_mean = NonLinear(300, self.args.z1_size, activation=None)
-        self.p_z1_logvar = NonLinear(300, self.args.z1_size, activation=nn.Hardtanh(min_val=-6., max_val=2.))
 
-        # decoder: p(x | z)
+        self.p_z1_mean = Linear(300, self.args.z1_size)
+        self.p_z1_logvar = NonLinear(300, self.args.z1_size, activation=nn.Hardtanh(min_val=-6.,max_val=2.))
+
+        # decoder: p(x | z1, z2)
         self.p_x_layers_z1 = nn.Sequential(
             GatedDense(self.args.z1_size, 300)
         )
         self.p_x_layers_z2 = nn.Sequential(
             GatedDense(self.args.z2_size, 300)
         )
-
-        self.p_x_layers_joint_pre = nn.Sequential(
-            GatedDense(2 * 300, np.prod(self.args.input_size))
-        )
-
-        # decoder: p(x | z)
-        act = nn.ReLU(True)
-        # joint
         self.p_x_layers_joint = nn.Sequential(
-            GatedConv3d(self.args.input_size[0], 48, 3, 1, 1),
-            GatedConv3d(48, 48, 3, 1, 1),
-            GatedConv3d(48, 48, 3, 1, 1),
-            GatedConv3d(48, 48, 3, 1, 1),
+            GatedDense(2 * 300, 300)
         )
 
         if self.args.input_type == 'binary':
-            self.p_x_mean = Conv3d(48, 1, 1, 1, 0, activation=nn.Sigmoid())
+            self.p_x_mean = NonLinear(300, np.prod(self.args.input_size), activation=nn.Sigmoid())
         elif self.args.input_type == 'gray' or self.args.input_type == 'continuous':
-            self.p_x_mean = Conv3d(48, self.args.input_size[0], 1, 1, 0, activation=nn.Sigmoid())
-            self.p_x_logvar = Conv3d(48, self.args.input_size[0], 1, 1, 0,
-                                     activation=nn.Hardtanh(min_val=-4.5, max_val=0.))
+            self.p_x_mean = NonLinear(300, np.prod(self.args.input_size), activation=nn.Sigmoid())
+            self.p_x_logvar = NonLinear(300, np.prod(self.args.input_size), activation=nn.Hardtanh(min_val=-4.5,max_val=0))
 
         # weights initialization
         for m in self.modules():
@@ -109,9 +86,14 @@ class VAE(Model):
 
     # AUXILIARY METHODS
     def calculate_loss(self, x, beta=1., average=False):
+        '''
+        :param x: input image(s)
+        :param beta: a hyperparam for warmup
+        :param average: whether to average loss or not
+        :return: value of a loss function
+        '''
         # pass through VAE
-        x_mean, x_logvar, z1_q, z1_q_mean, z1_q_logvar, z2_q, z2_q_mean, z2_q_logvar, z1_p_mean, z1_p_logvar = self.forward(
-            x)
+        x_mean, x_logvar, z1_q, z1_q_mean, z1_q_logvar, z2_q, z2_q_mean, z2_q_logvar, z1_p_mean, z1_p_logvar = self.forward(x)
 
         # RE
         if self.args.input_type == 'binary':
@@ -128,7 +110,6 @@ class VAE(Model):
         log_q_z2 = log_Normal_diag(z2_q, z2_q_mean, z2_q_logvar, dim=1)
         KL = -(log_p_z1 + log_p_z2 - log_q_z1 - log_q_z2)
 
-        # full loss
         loss = -RE + beta * KL
 
         if average:
@@ -160,15 +141,16 @@ class VAE(Model):
             a = []
             for r in range(0, int(R)):
                 # Repeat it for all training points
-                x = x_single.expand(S, x_single.size(1)).contiguous()
+                x = x_single.expand(S, x_single.size(1))
 
                 a_tmp, _, _ = self.calculate_loss(x)
-                a.append(-a_tmp.cpu().data.numpy())
+
+                a.append( -a_tmp.cpu().data.numpy() )
 
             # calculate max
             a = np.asarray(a)
             a = np.reshape(a, (a.shape[0] * a.shape[1], 1))
-            likelihood_x = logsumexp(a)
+            likelihood_x = logsumexp( a )
             likelihood_test.append(likelihood_x - np.log(len(a)))
 
         likelihood_test = np.array(likelihood_test)
@@ -198,57 +180,44 @@ class VAE(Model):
 
         return lower_bound
 
+    # ADDITIONAL METHODS
     def generate_x(self, N=25):
-        # Sampling z2 from a prior
         if self.args.prior == 'standard':
-            z2_sample_rand = Variable(torch.FloatTensor(N, self.args.z1_size).normal_())
+            z2_sample_rand = Variable( torch.FloatTensor(N, self.args.z1_size).normal_() )
             if self.args.cuda:
                 z2_sample_rand = z2_sample_rand.cuda()
 
         elif self.args.prior == 'vampprior':
-            # if len(self.args.input_size)
-            # means = self.means(self.idle_input)[0:N].view(-1, self.args.input_size[0], self.args.input_size[1],
-            #                                               self.args.input_size[2])
-            means = self.means(self.idle_input)[0:N].view(-1, *self.args.input_size)
-
+            means = self.means(self.idle_input)[0:N]
             z2_sample_gen_mean, z2_sample_gen_logvar = self.q_z2(means)
             z2_sample_rand = self.reparameterize(z2_sample_gen_mean, z2_sample_gen_logvar)
 
-        # Sampling z1 from a model
         z1_sample_mean, z1_sample_logvar = self.p_z1(z2_sample_rand)
         z1_sample_rand = self.reparameterize(z1_sample_mean, z1_sample_logvar)
-
-        # Sampling from PixelCNN
-        samples_gen, _ = self.p_x(z1_sample_rand, z2_sample_rand)
-
-        return samples_gen
+        samples_rand, _ = self.p_x(z1_sample_rand, z2_sample_rand)
+        return samples_rand
 
     def reconstruct_x(self, x):
-        x_reconstructed, _, _, _, _, _, _, _, _, _ = self.forward(x)
-
-        return x_reconstructed
+        x_mean, _, _, _, _, _, _, _, _, _ = self.forward(x)
+        return x_mean
 
     # THE MODEL: VARIATIONAL POSTERIOR
     def q_z2(self, x):
-        # processing x
-        h = self.q_z2_layers(x)
-        h = h.view(x.size(0), -1)
-        # predict mean and variance
-        z2_q_mean = self.q_z2_mean(h)
-        z2_q_logvar = self.q_z2_logvar(h)
+        x = self.q_z2_layers(x)
+
+        z2_q_mean = self.q_z2_mean(x)
+        z2_q_logvar = self.q_z2_logvar(x)
         return z2_q_mean, z2_q_logvar
 
     def q_z1(self, x, z2):
-        # x = x.view(x.size(0),-1)
-        # processing x
         x = self.q_z1_layers_x(x)
-        x = x.view(x.size(0), -1)
-        # processing z2
+
         z2 = self.q_z1_layers_z2(z2)
-        # concatenating
-        h = torch.cat((x, z2), 1)
+
+        h = torch.cat((x,z2), 1)
+
         h = self.q_z1_layers_joint(h)
-        # predict mean and variance
+
         z1_q_mean = self.q_z1_mean(h)
         z1_q_logvar = self.q_z1_logvar(h)
         return z1_q_mean, z1_q_logvar
@@ -256,32 +225,26 @@ class VAE(Model):
     # THE MODEL: GENERATIVE DISTRIBUTION
     def p_z1(self, z2):
         z2 = self.p_z1_layers(z2)
-        # predict mean and variance
-        z1_p_mean = self.p_z1_mean(z2)
-        z1_p_logvar = self.p_z1_logvar(z2)
-        return z1_p_mean, z1_p_logvar
+
+        z1_mean = self.p_z1_mean(z2)
+        z1_logvar = self.p_z1_logvar(z2)
+        return z1_mean, z1_logvar
 
     def p_x(self, z1, z2):
-        # processing z2
-        z2 = self.p_x_layers_z2(z2)
-        # processing z1
         z1 = self.p_x_layers_z1(z1)
-        # concatenate x and z1 and z2
+
+        z2 = self.p_x_layers_z2(z2)
+
         h = torch.cat((z1, z2), 1)
 
-        h = self.p_x_layers_joint_pre(h)
-        h = h.view(-1, *self.args.input_size)
+        h = self.p_x_layers_joint(h)
 
-        # joint decoder part of the decoder
-        h_decoder = self.p_x_layers_joint(h)
-
-        x_mean = self.p_x_mean(h_decoder).view(-1, np.prod(self.args.input_size))
+        x_mean = self.p_x_mean(h)
         if self.args.input_type == 'binary':
             x_logvar = 0.
         else:
-            x_mean = torch.clamp(x_mean, min=0. + 1. / 512., max=1. - 1. / 512.)
-            x_logvar = self.p_x_logvar(h_decoder).view(-1, np.prod(self.args.input_size))
-
+            x_mean = torch.clamp(x_mean, min=0.+1./512., max=1.-1./512.)
+            x_logvar = self.p_x_logvar(h)
         return x_mean, x_logvar
 
     # the prior
@@ -290,14 +253,14 @@ class VAE(Model):
             log_prior = log_Normal_standard(z2, dim=1)
 
         elif self.args.prior == 'vampprior':
-            # z - MB x M
+            # z2 - MB x M
             C = self.args.number_components
 
             # calculate params
-            X = self.means(self.idle_input).view(-1, *self.args.input_size)
+            X = self.means(self.idle_input)
 
             # calculate params for given data
-            z2_p_mean, z2_p_logvar = self.q_z2(X)  # C x M)
+            z2_p_mean, z2_p_logvar = self.q_z2(X)  # C x M
 
             # expand z
             z_expand = z2.unsqueeze(1)
@@ -316,7 +279,6 @@ class VAE(Model):
 
     # THE MODEL: FORWARD PASS
     def forward(self, x):
-        x = x.view(-1, *self.args.input_size)
         # z2 ~ q(z2 | x)
         z2_q_mean, z2_q_logvar = self.q_z2(x)
         z2_q = self.reparameterize(z2_q_mean, z2_q_logvar)
@@ -330,4 +292,5 @@ class VAE(Model):
 
         # x_mean = p(x|z1,z2)
         x_mean, x_logvar = self.p_x(z1_q, z2_q)
+
         return x_mean, x_logvar, z1_q, z1_q_mean, z1_q_logvar, z2_q, z2_q_mean, z2_q_logvar, z1_p_mean, z1_p_logvar

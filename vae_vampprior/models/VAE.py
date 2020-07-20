@@ -10,10 +10,10 @@ from scipy.special import logsumexp
 from torch.autograd import Variable
 from torch.nn import Linear
 
-from models.Model import Model
-from utils.distributions import log_Bernoulli, log_Normal_diag, log_Normal_standard, log_Logistic_256
-from utils.nn import he_init, GatedDense, NonLinear
-from utils.visual_evaluation import plot_histogram
+from vae_vampprior.models import Model
+from vae_vampprior.utils.distributions import log_Bernoulli, log_Normal_diag, log_Normal_standard, log_Logistic_256
+from vae_vampprior.utils import he_init, GatedDense, NonLinear
+from vae_vampprior.utils import plot_histogram
 
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=

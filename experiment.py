@@ -2,15 +2,14 @@ from __future__ import print_function
 import argparse
 
 import torch
-import torch.optim as optim
 
-from utils.optimizer import AdamNormGrad
+from vae_vampprior.utils import AdamNormGrad
 
 import os
 
 import datetime
 
-from utils.load_data import load_dataset
+from vae_vampprior.utils import load_dataset
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -121,13 +120,13 @@ def run(args, kwargs):
     print('create model')
     # importing model
     if args.model_name == 'vae':
-        from models.VAE import VAE
+        from vae_vampprior.models import VAE
     elif args.model_name == 'hvae_2level':
-        from models.HVAE_2level import VAE
+        from vae_vampprior.models import VAE
     elif args.model_name == 'convhvae_2level':
-        from models.convHVAE_2level import VAE
+        from vae_vampprior.models import VAE
     elif args.model_name == 'pixelhvae_2level':
-        from models.PixelHVAE_2level import VAE
+        from vae_vampprior.models import VAE
     else:
         raise Exception('Wrong name of the model!')
 
@@ -144,7 +143,7 @@ def run(args, kwargs):
 
     # ======================================================================================================================
     print('perform experiment')
-    from utils.perform_experiment import experiment_vae
+    from vae_vampprior.utils.perform_experiment import experiment_vae
     experiment_vae(args, train_loader, val_loader, test_loader, model, optimizer, dir, model_name = args.model_name)
     # ======================================================================================================================
     print('-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')

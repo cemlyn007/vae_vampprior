@@ -12,7 +12,7 @@ model = torch.load(os.path.join(results_path, "conv3dhvae_2level.model"))
 args = torch.load(os.path.join(results_path, "conv3dhvae_2level.config"))
 kwargs = {'num_workers': 4, 'pin_memory': True} if args.cuda else {}
 
-from datasets.vortices.dataset import VoxelDataset
+from vae_vampprior.datasets.vortices.dataset import VoxelDataset
 
 dataset = VoxelDataset(os.path.join('datasets', 'vortices', 'data'), data_only=False)
 

@@ -19,7 +19,7 @@ def load_voxel_vortices(args, **kwargs):
     args.dynamic_binarization = False
 
     # start processing
-    from datasets.vortices.dataset import VoxelDataset
+    from vae_vampprior.datasets.vortices.dataset import VoxelDataset
 
     dataset = VoxelDataset(os.path.join('datasets', 'vortices', 'data'), data_only=False)
 

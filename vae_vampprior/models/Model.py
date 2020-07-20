@@ -7,7 +7,7 @@ import torch.utils.data
 import torch.nn as nn
 from torch.autograd import Variable
 
-from utils.nn import normal_init, NonLinear
+from vae_vampprior.utils import normal_init, NonLinear
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 #=======================================================================================================================

@@ -12,8 +12,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 # ======================================================================================================================
 def experiment_vae(args, train_loader, val_loader, test_loader, model, optimizer, dir, model_name='vae'):
-    from utils.training import train_vae as train
-    from utils.evaluation import evaluate_vae as evaluate
+    from vae_vampprior.utils import train_vae as train
+    from vae_vampprior.utils import evaluate_vae as evaluate
 
     # SAVING
     torch.save(args, dir + args.model_name + '.config')
